@@ -1,11 +1,3 @@
-/**
- * Verifies that if the same Stripe event.id is delivered twice (which
- * Stripe's own docs say WILL happen under at-least-once delivery), our
- * handler processes it once and short-circuits the second delivery.
- *
- * Mongoose models and the Stripe SDK are both mocked so this runs without
- * a real database or network connection.
- */
 
 const mockEvent = {
   id: 'evt_test_123',
@@ -23,7 +15,7 @@ jest.mock('stripe', () => {
 
 const mockProcessedStore = new Set();
 
-jest.mock('../src/models/ProcessedEvent', () => ({
+jest.mock('../src/billing/models/ProcessedEvent', () => ({
   findOne: jest.fn(({ stripeEventId }) =>
     Promise.resolve(mockProcessedStore.has(stripeEventId) ? { stripeEventId } : null)
   ),
@@ -33,11 +25,11 @@ jest.mock('../src/models/ProcessedEvent', () => ({
   }),
 }));
 
-jest.mock('../src/models/Subscription', () => ({
+jest.mock('../src/billing/models/Subscription', () => ({
   findOneAndUpdate: jest.fn(() => Promise.resolve({})),
 }));
 
-jest.mock('../src/models/Customer', () => ({
+jest.mock('../src/billing/models/Customer', () => ({
   findOneAndUpdate: jest.fn(() => Promise.resolve({})),
 }));
 
@@ -46,8 +38,8 @@ process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
 
 const express = require('express');
 const request = require('supertest');
-const webhooksRouter = require('../src/routes/webhooks');
-const Subscription = require('../src/models/Subscription');
+const webhooksRouter = require('../src/billing/routes/webhooks');
+const Subscription = require('../src/billing/models/Subscription');
 
 function buildApp() {
   const app = express();

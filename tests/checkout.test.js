@@ -1,10 +1,3 @@
-/**
- * Verifies that repeated /checkout requests with the SAME idempotency key
- * result in a single Stripe session being created, not two.
- *
- * We mock the Stripe SDK entirely so this test doesn't hit the real
- * network or require live API keys.
- */
 
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => {
@@ -16,8 +9,6 @@ jest.mock('stripe', () => {
           create: jest.fn((params, options) => {
             const key = options?.idempotencyKey;
 
-            // Emulate real Stripe idempotency behaviour: same key => same
-            // session object returned, no new session created.
             if (key && createdSessions.has(key)) {
               return Promise.resolve(createdSessions.get(key));
             }
@@ -43,7 +34,7 @@ process.env.CLIENT_CANCEL_URL = 'http://localhost/cancel';
 
 const express = require('express');
 const request = require('supertest');
-const checkoutRouter = require('../src/routes/checkout');
+const checkoutRouter = require('../src/billing/routes/checkout');
 
 function buildApp() {
   const app = express();

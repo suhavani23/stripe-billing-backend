@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>stripe-billing-backend — Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #ffffff10;
+      --border2: #ffffff1a;
+      --accent: #635bff;
+      --accent2: #00d4aa;
+      --accent3: #ff6b6b;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    /* --- Header --- */
+    .header {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .stripe-logo {
+      width: 42px; height: 42px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 22px;
+    }
+    .header-text h1 { font-size: 22px; font-weight: 600; }
+    .header-text p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      background: #00d4aa18;
+      border: 1px solid #00d4aa33;
+      color: var(--accent2);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* --- Main grid --- */
+    .main { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+    /* --- Section label --- */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* --- Endpoint cards --- */
+    .endpoints { display: flex; flex-direction: column; gap: 12px; }
+    .endpoint-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .endpoint-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--accent)08 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .endpoint-card:hover { border-color: var(--accent)66; background: var(--surface2); }
+    .endpoint-card:hover::before { opacity: 1; }
+    .endpoint-card.active { border-color: var(--accent); }
+    .endpoint-card.active::before { opacity: 1; }
+
+    .method {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .post { background: #635bff22; color: var(--accent); border: 1px solid #635bff44; }
+    .get  { background: #00d4aa22; color: var(--accent2); border: 1px solid #00d4aa44; }
+
+    .endpoint-info { flex: 1; }
+    .endpoint-path {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .endpoint-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .endpoint-chevron {
+      color: var(--muted);
+      font-size: 18px;
+      transition: transform 0.2s, color 0.2s;
+      margin-top: 1px;
+    }
+    .endpoint-card.active .endpoint-chevron { transform: rotate(90deg); color: var(--accent); }
+
+    /* --- Expanded panel --- */
+    .endpoint-panel {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      padding: 20px 24px;
+      margin-top: -13px;
+      animation: slideDown 0.2s ease;
+    }
+    .endpoint-panel.open { display: block; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .panel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 600px) { .panel-cols { grid-template-columns: 1fr; } }
+
+    .panel-block label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 8px;
+    }
+    pre {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #0a0a0f;
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 14px;
+      line-height: 1.6;
+      overflow-x: auto;
+      color: #c9d1d9;
+    }
+    .key   { color: #79b8ff; }
+    .str   { color: #9ecbff; }
+    .num   { color: #f8c555; }
+    .bool  { color: #56d364; }
+    .note  { color: var(--muted); font-style: italic; }
+
+    /* --- Flow diagram --- */
+    .flow {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 28px 24px;
+    }
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    .flow-step {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      text-align: center;
+      min-width: 130px;
+      position: relative;
+    }
+    .flow-step .step-num {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 600;
+      font-family: var(--mono);
+      margin-bottom: 4px;
+    }
+    .flow-step .step-label { font-size: 12px; font-weight: 500; }
+    .flow-step .step-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .flow-arrow {
+      color: var(--muted);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    /* --- Reliability features --- */
+    .features { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 600px) { .features { grid-template-columns: 1fr; } }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 18px 20px;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--border2); }
+    .feature-icon { font-size: 20px; margin-bottom: 10px; }
+    .feature-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .feature-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    /* --- File tree --- */
+    .file-tree {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 2;
+    }
+    .tree-dir { color: #79b8ff; }
+    .tree-file { color: var(--text); }
+    .tree-new { color: var(--accent2); }
+    .tree-muted { color: var(--muted); font-size: 11px; margin-left: 8px; }
+
+    /* --- Demo simulation --- */
+    .demo {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 28px 24px;
+    }
+    .demo-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .demo-controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .demo-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .demo-btn:hover { opacity: 0.85; }
+    .demo-btn:active { transform: scale(0.97); }
+    .demo-btn.secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+    }
+    .demo-btn.danger { background: #ff6b6b; }
+    .demo-log {
+      background: #050508;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.8;
+      min-height: 100px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .log-line { display: flex; gap: 10px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .log-time { color: var(--muted); flex-shrink: 0; }
+    .log-ok   { color: var(--accent2); }
+    .log-warn { color: #f8c555; }
+    .log-err  { color: var(--accent3); }
+    .log-info { color: #79b8ff; }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="stripe-logo">💳</div>
+    <div class="header-text">
+      <h1>stripe-billing-backend</h1>
+      <p>Node.js · Express · MongoDB · Stripe SDK</p>
+    </div>
+    <span class="badge">✓ 5 tests passing</span>
+  </header>
+
+  <div class="main">
+
+    <!-- ENDPOINTS -->
+    <section>
+      <p class="section-label">API Endpoints</p>
+      <div class="endpoints">
+
+        <div class="endpoint-card" onclick="toggle('checkout')">
+          <span class="method post">POST</span>
+          <div class="endpoint-info">
+            <div class="endpoint-path">/checkout</div>
+            <div class="endpoint-desc">Creates a Stripe Checkout Session for a subscription. Returns a redirect URL.</div>
+          </div>
+          <span class="endpoint-chevron">›</span>
+        </div>
+        <div class="endpoint-panel" id="checkout">
+          <div class="panel-cols">
+            <div class="panel-block">
+              <label>Request body</label>
+              <pre>{
+  <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+  <span class="key">"idempotencyKey"</span>: <span class="str">"checkout:abc123"</span>
+  <span class="note">// idempotencyKey optional</span>
+}</pre>
+            </div>
+            <div class="panel-block">
+              <label>Response 200</label>
+              <pre>{
+  <span class="key">"url"</span>: <span class="str">"https://checkout.stripe.com/..."</span>,
+  <span class="key">"sessionId"</span>: <span class="str">"cs_test_abc..."</span>
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint-card" onclick="toggle('webhooks')">
+          <span class="method post">POST</span>
+          <div class="endpoint-info">
+            <div class="endpoint-path">/webhooks/stripe</div>
+            <div class="endpoint-desc">Receives Stripe events. Verifies signature, deduplicates, updates subscription state.</div>
+          </div>
+          <span class="endpoint-chevron">›</span>
+        </div>
+        <div class="endpoint-panel" id="webhooks">
+          <div class="panel-cols">
+            <div class="panel-block">
+              <label>Events handled</label>
+              <pre><span class="str">checkout.session.completed</span>
+<span class="str">invoice.payment_failed</span>
+<span class="str">customer.subscription.updated</span>
+<span class="str">customer.subscription.deleted</span></pre>
+            </div>
+            <div class="panel-block">
+              <label>Response 200</label>
+              <pre>{
+  <span class="key">"received"</span>: <span class="bool">true</span>,
+  <span class="key">"duplicate"</span>: <span class="bool">true</span>
+  <span class="note">// duplicate only on re-delivery</span>
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint-card" onclick="toggle('health')">
+          <span class="method get">GET</span>
+          <div class="endpoint-info">
+            <div class="endpoint-path">/health</div>
+            <div class="endpoint-desc">Health check — returns 200 when the server is up.</div>
+          </div>
+          <span class="endpoint-chevron">›</span>
+        </div>
+        <div class="endpoint-panel" id="health">
+          <div class="panel-cols">
+            <div class="panel-block">
+              <label>Response 200</label>
+              <pre>{ <span class="key">"status"</span>: <span class="str">"ok"</span> }</pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- FLOW -->
+    <section>
+      <p class="section-label">Checkout Flow</p>
+      <div class="flow">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-num">01</div>
+            <div class="step-label">Client</div>
+            <div class="step-sub">POST /checkout</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-num">02</div>
+            <div class="step-label">Your Server</div>
+            <div class="step-sub">creates session</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-num">03</div>
+            <div class="step-label">Stripe</div>
+            <div class="step-sub">hosted checkout</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-num">04</div>
+            <div class="step-label">Webhook</div>
+            <div class="step-sub">session.completed</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-num">05</div>
+            <div class="step-label">MongoDB</div>
+            <div class="step-sub">sub activated</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RELIABILITY FEATURES -->
+    <section>
+      <p class="section-label">Reliability Features</p>
+      <div class="features">
+        <div class="feature-card">
+          <div class="feature-icon">🔑</div>
+          <div class="feature-title">Idempotency Keys</div>
+          <div class="feature-desc">Same key + same params = same Stripe session. Double-clicks and client retries don't create duplicate subscriptions.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <div class="feature-title">Signature Verification</div>
+          <div class="feature-desc">Every webhook payload is verified with <code style="font-family:var(--mono);font-size:11px">constructEvent()</code>. Fake events are rejected with 400.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">♻️</div>
+          <div class="feature-title">Duplicate Event Guard</div>
+          <div class="feature-desc">Stripe delivers at-least-once. Processed event IDs are stored in MongoDB so re-deliveries are skipped silently.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">Typed Error Handling</div>
+          <div class="feature-desc"><code style="font-family:var(--mono);font-size:11px">StripeConnectionError</code> → 503 (retry safe). <code style="font-family:var(--mono);font-size:11px">StripeInvalidRequestError</code> → 400 (don't retry).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILE TREE -->
+    <section>
+      <p class="section-label">Project Structure</p>
+      <div class="file-tree">
+        <div><span class="tree-dir">src/</span></div>
+        <div>&nbsp;&nbsp;<span class="tree-file">server.js</span> <span class="tree-muted">— Express app, calls mountBilling(app)</span></div>
+        <div>&nbsp;&nbsp;<span class="tree-file">db.js</span> <span class="tree-muted">— MongoDB connection</span></div>
+        <div>&nbsp;&nbsp;<span class="tree-dir">billing/</span> <span class="tree-new">← reusable module</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-file">index.js</span> <span class="tree-muted">— mountBilling(app) export</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-file">stripe.js</span> <span class="tree-muted">— shared Stripe singleton</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-dir">routes/</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-file">checkout.js</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-file">webhooks.js</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-dir">handlers/</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-file">checkout.js</span> · <span class="tree-file">payment.js</span> · <span class="tree-file">subscription.js</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-dir">models/</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-file">Customer.js</span> · <span class="tree-file">Subscription.js</span> · <span class="tree-file">ProcessedEvent.js</span></div>
+        <div><span class="tree-dir">tests/</span></div>
+        <div>&nbsp;&nbsp;<span class="tree-file">checkout.test.js</span> · <span class="tree-file">webhooks.test.js</span></div>
+      </div>
+    </section>
+
+    <!-- DEMO SIMULATOR -->
+    <section>
+      <p class="section-label">Simulated Request Log</p>
+      <div class="demo">
+        <p class="demo-subtitle">Click to simulate requests and see how the server responds.</p>
+        <div class="demo-controls">
+          <button class="demo-btn" onclick="sim('checkout')">POST /checkout</button>
+          <button class="demo-btn" onclick="sim('checkout-dupe')">POST /checkout (retry same key)</button>
+          <button class="demo-btn secondary" onclick="sim('webhook-ok')">Webhook: session.completed</button>
+          <button class="demo-btn secondary" onclick="sim('webhook-dupe')">Webhook: duplicate delivery</button>
+          <button class="demo-btn danger" onclick="sim('webhook-bad')">Webhook: bad signature</button>
+          <button class="demo-btn secondary" onclick="sim('health')">GET /health</button>
+          <button class="demo-btn secondary" style="color:var(--muted)" onclick="clearLog()">Clear</button>
+        </div>
+        <div class="demo-log" id="log"><div class="log-line"><span class="log-info">// Click a button above to simulate a request</span></div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    function toggle(id) {
+      const card = document.querySelector(`[onclick="toggle('${id}')"]`);
+      const panel = document.getElementById(id);
+      const isOpen = panel.classList.contains('open');
+      document.querySelectorAll('.endpoint-panel').forEach(p => p.classList.remove('open'));
+      document.querySelectorAll('.endpoint-card').forEach(c => c.classList.remove('active'));
+      if (!isOpen) {
+        panel.classList.add('open');
+        card.classList.add('active');
+      }
+    }
+
+    const log = document.getElementById('log');
+    let sessionId = null;
+
+    function addLine(cls, text) {
+      const now = new Date();
+      const ts = now.toTimeString().slice(0, 8);
+      const el = document.createElement('div');
+      el.className = 'log-line';
+      el.innerHTML = `<span class="log-time">${ts}</span><span class="${cls}">${text}</span>`;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      log.innerHTML = '<div class="log-line"><span class="log-info">// log cleared</span></div>';
+      sessionId = null;
+    }
+
+    function sim(type) {
+      const id = `cs_test_${Math.random().toString(36).slice(2, 10)}`;
+
+      if (type === 'checkout') {
+        sessionId = id;
+        addLine('log-info', 'POST /checkout  { email: "user@example.com", idempotencyKey: "key-abc" }');
+        setTimeout(() => addLine('log-info', '  → stripe.checkout.sessions.create() called with idempotencyKey'), 300);
+        setTimeout(() => addLine('log-ok',   `  ← 200  { url: "https://checkout.stripe.com/...", sessionId: "${id}" }`), 700);
+      }
+
+      else if (type === 'checkout-dupe') {
+        const retId = sessionId || id;
+        addLine('log-info', 'POST /checkout  { email: "user@example.com", idempotencyKey: "key-abc" }  (retry)');
+        setTimeout(() => addLine('log-info', '  → stripe.checkout.sessions.create() — same key, Stripe returns cached session'), 300);
+        setTimeout(() => addLine('log-ok',   `  ← 200  { url: "https://checkout.stripe.com/...", sessionId: "${retId}" }  (same session, no duplicate)`), 700);
+      }
+
+      else if (type === 'webhook-ok') {
+        const evtId = `evt_${Math.random().toString(36).slice(2, 12)}`;
+        addLine('log-info', `POST /webhooks/stripe  stripe-signature: t=...,v1=...`);
+        setTimeout(() => addLine('log-info',  '  → signature verified ✓'), 200);
+        setTimeout(() => addLine('log-info',  `  → ProcessedEvent.findOne({ stripeEventId: "${evtId}" }) → null`), 400);
+        setTimeout(() => addLine('log-info',  '  → handleCheckoutCompleted()  upsert Customer + Subscription'), 600);
+        setTimeout(() => addLine('log-ok',    `  → ProcessedEvent.create({ stripeEventId: "${evtId}" })`), 800);
+        setTimeout(() => addLine('log-ok',    '  ← 200  { received: true }'), 1000);
+      }
+
+      else if (type === 'webhook-dupe') {
+        const evtId = `evt_dupe_${Math.random().toString(36).slice(2, 8)}`;
+        addLine('log-info', `POST /webhooks/stripe  (duplicate delivery of ${evtId})`);
+        setTimeout(() => addLine('log-info',  '  → signature verified ✓'), 200);
+        setTimeout(() => addLine('log-warn',  `  → ProcessedEvent.findOne() → already processed, skipping`), 500);
+        setTimeout(() => addLine('log-ok',    '  ← 200  { received: true, duplicate: true }'), 700);
+      }
+
+      else if (type === 'webhook-bad') {
+        addLine('log-info', 'POST /webhooks/stripe  stripe-signature: t=...,v1=invalid');
+        setTimeout(() => addLine('log-err',  '  → stripe.webhooks.constructEvent() threw: No signatures found matching the expected signature'), 400);
+        setTimeout(() => addLine('log-err',  '  ← 400  Webhook Error: No signatures found matching...'), 600);
+      }
+
+      else if (type === 'health') {
+        addLine('log-info', 'GET /health');
+        setTimeout(() => addLine('log-ok', '  ← 200  { status: "ok" }'), 200);
+      }
+    }
+  </script>
+</body>
+</html>

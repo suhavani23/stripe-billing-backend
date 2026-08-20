@@ -1,14 +1,6 @@
 const mongoose = require('mongoose');
 
-// Mirrors a small, relevant slice of Stripe's own subscription status enum.
-// See: https://stripe.com/docs/api/subscriptions/object#subscription_object-status
-const STATUSES = [
-  'incomplete',
-  'active',
-  'past_due',
-  'canceled',
-  'unpaid',
-];
+const STATUSES = ['incomplete', 'active', 'past_due', 'canceled', 'unpaid'];
 
 const subscriptionSchema = new mongoose.Schema(
   {
